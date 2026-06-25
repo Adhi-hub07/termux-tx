@@ -71,7 +71,7 @@ mirror_list() {
 
 mirror_best() {
   log_section "Finding Best Mirror..."
-  mirror_test | sort -k2 -n | head -1 | awk '{print $1}' | while IFS= read -r url; do
+  mirror_test | sed 's/\x1b\[[0-9;]*m//g' | sort -k2 -n | head -1 | awk '{print $1}' | while IFS= read -r url; do
     log_success "Fastest: $url"
     if confirm "Set this mirror?" "y"; then
       mirror_set "$url"

@@ -340,7 +340,7 @@ theme_create() {
   > "$file"
   for key in bg fg 0 1 2 3 4 5 6 7; do
     read -r -p "  ${colors[$key]}: " val
-    val="${val:-${defaults[$key]:-000000}}"
+    val="${val:-000000}"
     echo "${colors[$key]%% *}=#$val" >> "$file"
   done
   log_success "Theme saved: $file"

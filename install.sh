@@ -103,7 +103,7 @@ fi
 
 # Setup completion
 if [[ -n "${BASH_VERSION:-}" ]]; then
-  local comp_file="$INSTALL_DIR/completion/tx-completion.bash"
+  comp_file="$INSTALL_DIR/completion/tx-completion.bash"
   if [[ -f "$comp_file" ]]; then
     local rcfile="$HOME/.bashrc"
     [[ "$ENV" == "termux" ]] && rcfile="$HOME/.bashrc"

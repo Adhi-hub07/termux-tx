@@ -94,7 +94,6 @@ net_scan() {
     nmap -sT -sV -T4 --open "$host" -p "$ports" 2>/dev/null || nmap "$host" -p "$ports" 2>/dev/null
   elif command -v nc &>/dev/null; then
     log_info "Scanning $host with netcat..."
-    local IFS=-
     if [[ "$ports" == *-* ]]; then
       local start="${ports%-*}" end="${ports#*-}"
       for p in $(seq "$start" "$end"); do
@@ -107,7 +106,6 @@ net_scan() {
     fi
   else
     log_info "Using bash TCP (basic scan)..."
-    local IFS=-
     if [[ "$ports" == *-* ]]; then
       local start="${ports%-*}" end="${ports#*-}"
       for p in $(seq "$start" "$end"); do
@@ -277,22 +275,23 @@ net_subdomain() {
   log_section "Subdomain Discovery — $domain"
   need_cmd curl || return 1
   log_info "Querying crt.sh..."
-  curl -s "https://crt.sh/?q=%25.$domain&output=json" 2>/dev/null | python3 -c "
+  curl -s "https://crt.sh/?q=%25.$domain&output=json" 2>/dev/null | python3 -c '
 import sys, json
+domain = sys.argv[1]
 try:
   data = json.load(sys.stdin)
   subs = set()
   for entry in data:
-    name = entry.get('name_value','')
-    for n in name.split('\\n'):
+    name = entry.get("name_value","")
+    for n in name.split("\n"):
       n = n.strip().lower()
-      if n.endswith('.$domain') or n == '$domain':
+      if n.endswith("." + domain) or n == domain:
         subs.add(n)
   for s in sorted(subs)[:50]:
-    print(f'  $s')
-  print(f'\\n  Total: {len(subs)} subdomains')
-except: print('No results')
-" 2>/dev/null
+    print(f"  {s}")
+  print(f"\n  Total: {len(subs)} subdomains")
+except: print("No results")
+' "$domain" 2>/dev/null
 }
 
 net_headers() {

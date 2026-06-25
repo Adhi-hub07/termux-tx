@@ -66,20 +66,20 @@ osint_domain() {
 
   # SSL Cert
   echo -e "\n${BOLD}Certificate:${RESET}"
-  curl -s "https://crt.sh/?q=%25.$domain&output=json" 2>/dev/null | python3 -c "
+  curl -s "https://crt.sh/?q=%25.$domain&output=json" 2>/dev/null | python3 -c '
 import sys, json
 try:
   data = json.load(sys.stdin)
   subs = set()
   for e in data:
-    for n in e.get('name_value','').split('\\n'):
+    for n in e.get("name_value","").split("\n"):
       if n: subs.add(n.lower())
-  print('  Subdomains from certs:')
+  print("  Subdomains from certs:")
   for s in sorted(subs)[:20]:
-    print(f'    $s')
-  if len(subs) > 20: print(f'    ... and {len(subs)-20} more')
-except: print('  No cert data')
-" 2>/dev/null
+    print(f"    {s}")
+  if len(subs) > 20: print(f"    ... and {len(subs)-20} more")
+except: print("  No cert data")
+' 2>/dev/null
 
   # Wayback
   echo -e "\n${BOLD}Wayback URLs:${RESET}"
@@ -92,14 +92,14 @@ osint_ip() {
   log_section "IP Recon — $ip"
   need_cmd curl || return 1
 
-  curl -s "http://ip-api.com/json/$ip" 2>/dev/null | python3 -c "
+  curl -s "http://ip-api.com/json/$ip" 2>/dev/null | python3 -c '
 import sys, json
 try:
   d = json.load(sys.stdin)
   for k,v in d.items():
-    print(f'  {k}: {v}')
-except: print('Lookup failed')
-" 2>/dev/null
+    print(f"  {k}: {v}")
+except: print("Lookup failed")
+' 2>/dev/null
 }
 
 osint_email() {
@@ -141,14 +141,14 @@ osint_phone() {
   log_section "Phone Lookup — $phone"
   need_cmd curl || return 1
 
-  curl -s "https://phonevalidation.abstractapi.com/v1/?api_key=demo&phone=$phone" 2>/dev/null | python3 -c "
+  curl -s "https://phonevalidation.abstractapi.com/v1/?api_key=demo&phone=$phone" 2>/dev/null | python3 -c '
 import sys, json
 try:
   d = json.load(sys.stdin)
   for k,v in d.items():
-    print(f'  $k: $v')
-except: print('Lookup failed')
-" 2>/dev/null || echo "  API requires key, trying local format check..."
+    print(f"  {k}: {v}")
+except: print("Lookup failed")
+' 2>/dev/null || echo "  API requires key, trying local format check..."
   echo -e "  Number    : ${BOLD}$phone${RESET}"
   echo -e "  Length    : ${BOLD}${#phone}${RESET}"
 }
@@ -191,17 +191,17 @@ osint_breach() {
   log_section "Breach Check — $email"
   need_cmd curl || return 1
 
-  curl -s "https://leak-check.net/api/v2/check?email=$email" 2>/dev/null | python3 -c "
+  curl -s "https://leak-check.net/api/v2/check?email=$email" 2>/dev/null | python3 -c '
 import sys, json
 try:
   d = json.load(sys.stdin)
-  if d.get('breaches'):
-    print(f'  ${RED}Found in breaches:${RESET}')
-    for b in d['breaches']: print(f'    - $b')
+  if d.get("breaches"):
+    print("  \033[31mFound in breaches:\033[0m")
+    for b in d["breaches"]: print(f"    - {b}")
   else:
-    print(f'  ${GREEN}No known breaches${RESET}')
-except: print('  API unavailable')
-" 2>/dev/null
+    print("  \033[32mNo known breaches\033[0m")
+except: print("  API unavailable")
+' 2>/dev/null
 }
 
 osint_dns() {
@@ -224,20 +224,20 @@ osint_subdomain() {
   need_cmd curl || return 1
 
   log_info "crt.sh..."
-  curl -s "https://crt.sh/?q=%25.$domain&output=json" 2>/dev/null | python3 -c "
+  curl -s "https://crt.sh/?q=%25.$domain&output=json" 2>/dev/null | python3 -c '
 import sys, json
 try:
   data = json.load(sys.stdin)
   subs = set()
   for e in data:
-    for n in e.get('name_value','').split('\\n'):
+    for n in e.get("name_value","").split("\n"):
       n = n.strip().lower()
       if n: subs.add(n)
   for s in sorted(subs)[:50]:
-    print(f'  $s')
-  if len(subs) > 50: print(f'  ... and {len(subs) - 50} more')
-except: print('  No results')
-" 2>/dev/null
+    print(f"  {s}")
+  if len(subs) > 50: print(f"  ... and {len(subs) - 50} more")
+except: print("  No results")
+' 2>/dev/null
 }
 
 osint_cert() {
@@ -263,16 +263,16 @@ osint_github() {
   log_section "GitHub Recon — $user"
   need_cmd curl || return 1
 
-  curl -s "https://api.github.com/users/$user" 2>/dev/null | python3 -c "
+  curl -s "https://api.github.com/users/$user" 2>/dev/null | python3 -c '
 import sys, json
 try:
   d = json.load(sys.stdin)
-  if d.get('message','') == 'Not Found': print('  ${RED}User not found${RESET}')
+  if d.get("message","") == "Not Found": print("  \033[31mUser not found\033[0m")
   else:
-    for k in ['login','name','company','blog','location','email','bio','public_repos','followers','following','created_at']:
-      if d.get(k): print(f'  $k: {d[k]}')
-except: print('  API error')
-" 2>/dev/null
+    for k in ["login","name","company","blog","location","email","bio","public_repos","followers","following","created_at"]:
+      if d.get(k): print(f"  {k}: {d[k]}")
+except: print("  API error")
+' 2>/dev/null
 }
 
 osint_shodan() {

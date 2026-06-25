@@ -203,7 +203,7 @@ sys_network() {
     ip=$(ip -4 addr show "$name" 2>/dev/null | awk '/inet /{print $2}' | head -1)
     mac=$(cat "$iface/address" 2>/dev/null || echo "N/A")
     local state
-    state=$(cat "$iface/operstate" 2>/dev/null || "unknown")
+    state=$(cat "$iface/operstate" 2>/dev/null) || state="unknown"
     local color="$DIM"
     [[ "$state" == "up" ]] && color="$GREEN"
     echo -e "  ${color}${name}${RESET}: ip=${BOLD}${ip:-N/A}${RESET} mac=${DIM}${mac}${RESET} [${color}${state}${RESET}]"
