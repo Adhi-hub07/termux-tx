@@ -41,7 +41,7 @@ echo ""
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 echo -e "${CYAN}[*] Checking dependencies...${RESET}"
-DEPS=(curl git)
+MISSING=() ; DEPS=(curl git)
 for dep in "${DEPS[@]}"; do
   if command -v "$dep" &>/dev/null; then
     echo -e "  ${GREEN}✓${RESET} $dep"
