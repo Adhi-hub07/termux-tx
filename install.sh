@@ -65,7 +65,17 @@ echo ""
 echo -e "${CYAN}[*] Installing TX...${RESET}"
 
 # Get the directory where install.sh is located
-SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SRC_DIR=""
+# Handle pipe install: bash <(curl ...) → BASH_SOURCE points to /proc/self/fd
+if [[ ! -f "$SRC_DIR/tx" ]] || [[ "$SRC_DIR" == /proc/* ]] || [[ "$SRC_DIR" == /dev/* ]]; then
+  echo -e "${YELLOW}[!] Detected pipe install. Cloning repo first...${RESET}"
+  TMP_DIR=$(mktemp -d)
+  git clone --depth 1 https://github.com/Adhi-hub07/termux-tx.git "$TMP_DIR" 2>/dev/null || {
+    echo -e "${RED}[-] Git clone failed. Install git and try again.${RESET}"
+    exit 1
+  }
+  SRC_DIR="$TMP_DIR"
+fi
 
 # Create install directories
 mkdir -p "$INSTALL_DIR/lib" "$INSTALL_DIR/tools" "$INSTALL_DIR/config" "$INSTALL_DIR/completion"
