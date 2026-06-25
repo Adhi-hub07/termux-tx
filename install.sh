@@ -115,7 +115,7 @@ fi
 if [[ -n "${BASH_VERSION:-}" ]]; then
   comp_file="$INSTALL_DIR/completion/tx-completion.bash"
   if [[ -f "$comp_file" ]]; then
-    local rcfile="$HOME/.bashrc"
+    rcfile="$HOME/.bashrc"
     [[ "$ENV" == "termux" ]] && rcfile="$HOME/.bashrc"
     if ! grep -q "tx-completion" "$rcfile" 2>/dev/null; then
       echo "source $comp_file" >> "$rcfile"
