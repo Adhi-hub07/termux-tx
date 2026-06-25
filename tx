@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+#===============================================================================
+#  TX - Termux eXecutive v2.0
+#  Advanced Cybersecurity CLI Tool for Termux & Linux
+#  Author: Adhi-hub07
+#  Repo:   https://github.com/Adhi-hub07/termux-tx
+#===============================================================================
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly TX_VERSION="2.0.0"
+readonly TX_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── Source modules ──────────────────────────────────────────────────────────
+for _mod in colors core banner; do
+  _modpath="$TX_ROOT/lib/$_mod.sh"
+  [[ -f "$_modpath" ]] && source "$_modpath"
+done
+
+# ── Config ──────────────────────────────────────────────────────────────────
+TX_CONFIG="${TX_CONFIG:-$HOME/.tx/config}"
+[[ -f "$TX_CONFIG" ]] && source "$TX_CONFIG"
+
+# ── Defaults ────────────────────────────────────────────────────────────────
+CACHE_DIR="${HOME}/.tx/cache"
+LOG_DIR="${HOME}/.tx/logs"
+MODULES_DIR="$TX_ROOT/lib"
+TOOLS_DIR="$TX_ROOT/tools"
+
+mkdir -p "$CACHE_DIR" "$LOG_DIR" 2>/dev/null || true
+
+# ── Detect environment ──────────────────────────────────────────────────────
+detect_env() {
+  if [[ -n "${TERMUX_VERSION:-}" ]]; then
+    echo "termux"
+  elif [[ -f /system/build.prop ]] && command -v getprop &>/dev/null; then
+    echo "android"
+  else
+    echo "linux"
+  fi
+}
+
+ENV="$(detect_env)"
+IS_TERMUX=false; IS_LINUX=false; IS_ANDROID=false
+[[ "$ENV" == "termux" ]] && IS_TERMUX=true
+[[ "$ENV" == "linux" ]] && IS_LINUX=true
+[[ "$ENV" == "android" ]] && IS_ANDROID=true
+
+# ── Command map ─────────────────────────────────────────────────────────────
+declare -A CMDS
+CMDS[sys]="System information & device details"
+CMDS[net]="Network tools — scan, sniff, resolve, geoip"
+CMDS[pkg]="Package manager wrapper"
+CMDS[fs]="File system & disk tools"
+CMDS[proc]="Process manager"
+CMDS[backup]="Backup & restore"
+CMDS[termux]="Termux API bridge"
+CMDS[theme]="Terminal themes & fonts"
+CMDS[mirror]="Mirror speed test & selector"
+CMDS[secure]="Security audit & hardening"
+CMDS[motd]="Custom login message"
+CMDS[alias]="Power aliases deployer"
+CMDS[scan]="Port scan, service detect, vuln check"
+CMDS[osint]="OSINT — recon, email, domain, ip"
+CMDS[exploit]="Exploit helpers & payloads"
+CMDS[crypto]="Encryption, hash, encode/decode"
+CMDS[anon]="Anonymity — tor, proxy, vpn"
+CMDS[payload]="Payload generator (msfvenom wrapper)"
+CMDS[forensic]="Forensic analysis helpers"
+CMDS[phish]="Phishing framework (educational)"
+CMDS[wf]="WiFi audit tools"
+CMDS[auto]="Automation & scheduled tasks"
+CMDS[update]="Update TX to latest version"
+CMDS[help]="Show this help"
+
+# ── Load all modules ────────────────────────────────────────────────────────
+load_module() {
+  local mod="$1"
+  local modfile="$MODULES_DIR/${mod}.sh"
+  if [[ -f "$modfile" ]]; then
+    source "$modfile"
+    return 0
+  fi
+  return 1
+}
+
+# ── Main ────────────────────────────────────────────────────────────────────
+main() {
+  [[ $# -eq 0 ]] && { banner_show; cmd_help; exit 0; }
+
+  local cmd="$1"; shift
+
+  # Flags
+  case "$cmd" in
+    --json|--json=*)   TX_JSON=true;  [[ "$cmd" =~ =(.+) ]] && cmd="${BASH_REMATCH[1]}" || { cmd="${1:-}"; [[ -n "$cmd" ]] && shift; };;
+    --verbose|-v)      TX_VERBOSE=true; cmd="${1:-}"; [[ -n "$cmd" ]] && shift;;
+    --force|-f)        TX_FORCE=true; cmd="${1:-}"; [[ -n "$cmd" ]] && shift;;
+    --no-color)        TX_NO_COLOR=true; cmd="${1:-}"; [[ -n "$cmd" ]] && shift;;
+    -h|--help)         cmd_help; exit 0;;
+    -V|--version)      echo "TX v$TX_VERSION"; exit 0;;
+  esac
+
+  # Chaining — use --chain or + between commands
+  if [[ "$cmd" == "--chain" ]] || [[ "$cmd" == "+" ]]; then
+    for _c in "$@"; do _dispatch "$_c"; done
+    exit 0
+  fi
+  # Check if next arg is also a top-level command (chaining by context)
+  if [[ $# -gt 0 ]] && [[ -v CMDS["$1"] ]]; then
+    _dispatch "$cmd"
+    for _c in "$@"; do _dispatch "$_c"; done
+    exit 0
+  fi
+
+  _dispatch "$cmd" "$@"
+}
+
+_dispatch() {
+  local cmd="$1"; shift
+
+  if [[ ! -v CMDS["$cmd"] ]]; then
+    log_error "Unknown command: $cmd"
+    log_info "Run 'tx help' for available commands"
+    exit 1
+  fi
+
+  load_module "$cmd" 2>/dev/null || log_debug "No module file for $cmd — using built-in" || true
+
+  local func="cmd_${cmd}"
+  if declare -F "$func" &>/dev/null; then
+    TX_CMD="$cmd"
+    "$func" "$@"
+  else
+    log_error "Command '$cmd' not yet implemented"
+    exit 1
+  fi
+}
+
+# ── Built-in: help ──────────────────────────────────────────────────────────
+cmd_help() { help_show "$@"; }
+help_show() {
+  echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${RESET}"
+  echo -e "${CYAN}║${RESET}  ${BOLD}TX - Termux eXecutive v${TX_VERSION}${RESET}           ${CYAN}║${RESET}"
+  echo -e "${CYAN}║${RESET}  Advanced Cybersecurity CLI for Termux & Linux       ${CYAN}║${RESET}"
+  echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${RESET}"
+  echo ""
+  echo -e "  ${BOLD}USAGE:${RESET}  tx ${GREEN}<command>${RESET} [subcommand] [options]"
+  echo ""
+
+  local sorted
+  sorted=$(for k in "${!CMDS[@]}"; do echo "$k"; done | sort)
+
+  echo -e "  ${BOLD}COMMANDS:${RESET}"
+  echo ""
+
+  local max=0
+  for k in $sorted; do
+    [[ ${#k} -gt $max ]] && max=${#k}
+  done
+
+  for k in $sorted; do
+    local desc="${CMDS[$k]}"
+    printf "  ${GREEN}tx %-${max}s${RESET}  %s\n" "$k" "$desc"
+  done
+
+  echo ""
+  echo -e "  ${BOLD}OPTIONS:${RESET}"
+  echo -e "  ${YELLOW}--json${RESET}        Output in JSON format"
+  echo -e "  ${YELLOW}--verbose${RESET}     Verbose output"
+  echo -e "  ${YELLOW}--force${RESET}       Force operations"
+  echo -e "  ${YELLOW}--no-color${RESET}    Disable colors"
+  echo -e "  ${YELLOW}-h, --help${RESET}    Show help"
+  echo -e "  ${YELLOW}-V, --version${RESET} Show version"
+  echo ""
+  echo -e "  ${BOLD}CHAINING:${RESET}  tx ${GREEN}sys net pkg${RESET}  — runs multiple commands"
+  echo ""
+}
+
+# ── Built-in: update ────────────────────────────────────────────────────────
+cmd_update() {
+  spinner "Updating TX" "
+    cd \"$TX_ROOT\" && git pull origin master 2>/dev/null
+  "
+  log_success "TX updated successfully"
+}
+
+# ── Run ─────────────────────────────────────────────────────────────────────
+main "$@"
